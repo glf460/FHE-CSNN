@@ -1,0 +1,75 @@
+#include <chrono>  // 引入 chrono 库来进行时间计算
+#include <fstream>  // 引入 ofstream 来写入文件
+#include <sstream>  // 引入 stringstream 用于文件名生成
+
+using namespace std::chrono;  // 方便使用 std::chrono::steady_clock
+
+LweSample* Enc_CSNN::enc_forward(LweSample* input, int channel, int length, int width)
+{
+    // 获取当前时间并生成文件名
+    std::stringstream filename;
+    filename << "/home/glf/C++Projects/run_time/tau(" << this->decay_tau << ")/run_time.txt";
+    
+    // 创建文件输出流对象
+    std::ofstream out_file;
+    out_file.open(filename.str(), std::ios::out | std::ios::app);  // 以追加模式打开文件
+
+    if (!out_file.is_open()) {
+        std::cerr << "Error opening file!" << std::endl;
+        return nullptr;
+    }
+
+    // 记录卷积层的运行时间
+    auto start = steady_clock::now();
+    auto output = conv.forward(input, channel, length, width);  // 执行卷积操作
+    auto end = steady_clock::now();
+    auto conv_duration = duration_cast<seconds>(end - start);  // 计算时间差并转换为秒
+    out_file << "Conv layer time: " << conv_duration.count() << " seconds" << std::endl;
+
+    // 记录第一个 LIF 层的运行时间
+    start = steady_clock::now();
+    output = lif1.enc_forward(output, conv.out_dimension());  // 执行第一个 LIF 层的前向传播
+    end = steady_clock::now();
+    auto lif1_duration = duration_cast<seconds>(end - start);
+    out_file << "LIF1 layer time: " << lif1_duration.count() << " seconds" << std::endl;
+
+    // 记录池化层的运行时间
+    start = steady_clock::now();
+    output = mp.enc_forward(output, conv.outchannel(), conv.outH(), conv.outW());  // 执行池化操作
+    end = steady_clock::now();
+    auto mp_duration = duration_cast<seconds>(end - start);
+    out_file << "AvgPool layer time: " << mp_duration.count() << " seconds" << std::endl;
+
+    // 记录第一个全连接层的运行时间
+    start = steady_clock::now();
+    output = fc.enc_forward(output, mp.out_dimension());  // 执行第一个全连接层的前向传播
+    end = steady_clock::now();
+    auto fc_duration = duration_cast<seconds>(end - start);
+    out_file << "FC layer time: " << fc_duration.count() << " seconds" << std::endl;
+
+    // 记录第二个 LIF 层的运行时间
+    start = steady_clock::now();
+    output = lif2.enc_forward(output, hidden_dim);  // 执行第二个 LIF 层的前向传播
+    end = steady_clock::now();
+    auto lif2_duration = duration_cast<seconds>(end - start);
+    out_file << "LIF2 layer time: " << lif2_duration.count() << " seconds" << std::endl;
+
+    // 记录第二个全连接层的运行时间
+    start = steady_clock::now();
+    output = fc2.enc_forward(output, hidden_dim);  // 执行第二个全连接层的前向传播
+    end = steady_clock::now();
+    auto fc2_duration = duration_cast<seconds>(end - start);
+    out_file << "FC2 layer time: " << fc2_duration.count() << " seconds" << std::endl;
+
+    // 记录第三个 LIF 层的运行时间
+    start = steady_clock::now();
+    output = lif3.enc_forward(output, 4);  // 执行第三个 LIF 层的前向传播
+    end = steady_clock::now();
+    auto lif3_duration = duration_cast<seconds>(end - start);
+    out_file << "LIF3 layer time: " << lif3_duration.count() << " seconds" << std::endl;
+
+    // 关闭文件
+    out_file.close();
+
+    return output;
+}
