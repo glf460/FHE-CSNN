@@ -35,7 +35,7 @@ class DiscretizeTransform:
 train_transforms = transforms.Compose([
         # transforms.RandomHorizontalFlip(),     
         # transforms.RandomRotation(degrees=30),  
-        transforms.ToTensor(),  # 转换为Tensor
+        transforms.ToTensor(),  
         # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])  
         DiscretizeTransform(levels=4)
 ])
